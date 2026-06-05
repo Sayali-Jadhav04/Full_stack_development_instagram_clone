@@ -12,5 +12,6 @@ Features
 7. Secure Backend with Django
 
 Technologies Used
-Frontend:- HTML,CSS,JavaScript
-Backend:- Django,Python
+
+1. Frontend:- HTML,CSS,JavaScript
+2. Backend:- Django,Python
