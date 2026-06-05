@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumina — Share Your World</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0d0d; --paper: #faf8f5; --warm: #f5f0e8; --cream: #ede8de;
+    --gold: #c9a84c; --gold-light: #e8d08a; --rose: #d4606a;
+    --muted: #888070; --border: #ddd8cc; --card: #ffffff;
+    --shadow: rgba(13,13,13,0.08); --radius: 16px;
+    --transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--paper); color:var(--ink); min-height:100vh; overflow-x:hidden; }
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:var(--warm); }
+  ::-webkit-scrollbar-thumb { background:var(--gold); border-radius:3px; }
+
+  /* NAV */
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    background:rgba(250,248,245,0.94); backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border); height:64px;
+    display:flex; align-items:center; padding:0 24px; gap:16px;
+  }
+  .nav-logo { font-family:'Playfair Display',serif; font-size:1.6rem; font-style:italic; letter-spacing:-0.02em; color:var(--ink); flex:1; cursor:pointer; }
+  .nav-logo span { color:var(--gold); }
+  .nav-search { display:flex; align-items:center; background:var(--warm); border:1px solid var(--border); border-radius:40px; padding:8px 16px; gap:8px; transition:var(--transition); flex:0 0 220px; }
+  .nav-search:focus-within { border-color:var(--gold); background:white; box-shadow:0 0 0 3px rgba(201,168,76,0.12); }
+  .nav-search input { background:none; border:none; outline:none; font-family:'DM Sans',sans-serif; font-size:0.85rem; color:var(--ink); width:100%; }
+  .nav-search input::placeholder { color:var(--muted); }
+  .nav-icons { display:flex; gap:4px; }
+  .nav-icon { width:40px; height:40px; border-radius:50%; background:none; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink); transition:var(--transition); position:relative; }
+  .nav-icon:hover { background:var(--warm); color:var(--gold); }
+  .nav-icon svg { width:22px; height:22px; }
+  .badge { position:absolute; top:6px; right:6px; width:8px; height:8px; background:var(--rose); border-radius:50%; border:2px solid var(--paper); }
+  .nav-avatar { width:36px; height:36px; border-radius:50%; border:2px solid var(--gold); overflow:hidden; cursor:pointer; flex-shrink:0; }
+  .nav-avatar img { width:100%; height:100%; object-fit:cover; }
+
+  /* LAYOUT */
+  .layout { display:grid; grid-template-columns:1fr minmax(0,600px) 320px; gap:32px; max-width:1200px; margin:0 auto; padding:80px 24px 24px; align-items:start; }
+  .sidebar-left { display:none; }
+
+  /* STORIES */
+  .stories-bar { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; display:flex; gap:16px; overflow-x:auto; scrollbar-width:none; margin-bottom:20px; }
+  .stories-bar::-webkit-scrollbar { display:none; }
+  .story { display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; flex-shrink:0; transition:var(--transition); }
+  .story:hover { transform:translateY(-2px); }
+  .story-ring { width:62px; height:62px; border-radius:50%; padding:3px; background:linear-gradient(135deg,var(--gold) 0%,var(--rose) 50%,#9b59b6 100%); }
+  .story-ring.seen { background:var(--border); }
+  .story-img { width:100%; height:100%; border-radius:50%; border:2.5px solid white; object-fit:cover; display:block; }
+  .story-name { font-size:0.72rem; color:var(--muted); font-weight:500; max-width:62px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .story-add-wrap { width:62px; height:62px; border-radius:50%; border:2px dashed var(--border); overflow:hidden; position:relative; background:var(--warm); }
+  .story-add-wrap img { width:100%; height:100%; object-fit:cover; opacity:0.75; }
+  .story-add-wrap .plus-badge { position:absolute; bottom:0; right:0; width:20px; height:20px; background:var(--gold); border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; color:white; font-size:0.9rem; font-weight:700; line-height:1; }
+
+  /* POSTS */
+  .post { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:20px; transition:var(--transition); animation:fadeUp 0.5s ease both; }
+  .post:hover { box-shadow:0 8px 32px var(--shadow); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  .post-header { display:flex; align-items:center; gap:12px; padding:14px 16px; }
+  .post-avatar { width:42px; height:42px; border-radius:50%; border:2px solid var(--gold-light); overflow:hidden; cursor:pointer; flex-shrink:0; }
+  .post-avatar img { width:100%; height:100%; object-fit:cover; }
+  .post-meta { flex:1; }
+  .post-username { font-weight:600; font-size:0.9rem; cursor:pointer; }
+  .post-username:hover { color:var(--gold); }
+  .post-location { font-size:0.75rem; color:var(--muted); margin-top:1px; }
+  .post-menu { background:none; border:none; cursor:pointer; color:var(--muted); padding:4px; border-radius:8px; transition:var(--transition); }
+  .post-menu:hover { color:var(--ink); background:var(--warm); }
+
+  .post-image-wrap { width:100%; aspect-ratio:1; overflow:hidden; position:relative; background:var(--warm); cursor:pointer; }
+  .post-image-wrap img { width:100%; height:100%; object-fit:cover; transition:transform 0.6s ease; display:block; }
+  .post-image-wrap:hover img { transform:scale(1.04); }
+  .heart-burst { position:absolute; font-size:5rem; pointer-events:none; z-index:10; animation:heartPop 0.75s ease forwards; transform:translate(-50%,-50%); }
+  @keyframes heartPop { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.2)} 40%{opacity:1;transform:translate(-50%,-50%) scale(1.4)} 70%{opacity:1;transform:translate(-50%,-50%) scale(0.95)} 100%{opacity:0;transform:translate(-50%,-50%) scale(1)} }
+
+  .post-actions { padding:12px 16px 4px; display:flex; align-items:center; gap:4px; }
+  .action-btn { background:none; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; padding:7px 10px; border-radius:10px; color:var(--ink); font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; transition:var(--transition); }
+  .action-btn:hover { background:var(--warm); }
+  .action-btn svg { width:22px; height:22px; }
+  .action-btn.liked { color:var(--rose); }
+  .action-btn.liked svg { fill:var(--rose); stroke:var(--rose); }
+  .action-btn.saved { color:var(--gold); }
+  .action-btn.saved svg { fill:var(--gold); stroke:var(--gold); }
+  @keyframes heartBeat { 0%{transform:scale(1)} 30%{transform:scale(1.4)} 60%{transform:scale(0.9)} 100%{transform:scale(1)} }
+  .like-animate svg { animation:heartBeat 0.4s ease; }
+  .action-spacer { flex:1; }
+
+  .post-likes { padding:4px 16px; font-size:0.85rem; font-weight:600; }
+  .post-caption { padding:6px 16px 10px; font-size:0.875rem; line-height:1.55; }
+  .post-caption .username { font-weight:600; margin-right:6px; }
+  .post-comments-link { padding:0 16px 8px; font-size:0.82rem; color:var(--muted); cursor:pointer; }
+  .post-comments-link:hover { color:var(--ink); }
+  .post-time { padding:0 16px 12px; font-size:0.75rem; color:var(--muted); letter-spacing:0.02em; text-transform:uppercase; }
+
+  .post-comment-input { border-top:1px solid var(--border); display:flex; align-items:center; gap:10px; padding:10px 16px; }
+  .comment-me-avatar { width:28px; height:28px; border-radius:50%; overflow:hidden; flex-shrink:0; border:1.5px solid var(--border); }
+  .comment-me-avatar img { width:100%; height:100%; object-fit:cover; }
+  .post-comment-input input { flex:1; border:none; outline:none; font-family:'DM Sans',sans-serif; font-size:0.85rem; background:none; color:var(--ink); }
+  .post-comment-input input::placeholder { color:var(--muted); }
+  .comment-post-btn { background:none; border:none; cursor:pointer; color:var(--gold); font-weight:600; font-size:0.85rem; font-family:'DM Sans',sans-serif; transition:var(--transition); opacity:0.4; }
+  .comment-post-btn.active { opacity:1; }
+  .comment-post-btn:hover { color:var(--rose); }
+
+  .comments-section { padding:0 16px 10px; display:none; }
+  .comments-section.visible { display:block; }
+  .comment { display:flex; gap:10px; padding:8px 0; border-top:1px solid var(--border); animation:fadeUp 0.3s ease; }
+  .comment-avatar { width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0; border:1.5px solid var(--border); }
+  .comment-avatar img { width:100%; height:100%; object-fit:cover; }
+  .comment-body { flex:1; }
+  .comment-name { font-weight:600; font-size:0.8rem; }
+  .comment-text { font-size:0.82rem; color:var(--ink); margin-top:2px; }
+
+  /* CREATE POST */
+  .create-post { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:20px; display:flex; align-items:center; gap:12px; }
+  .create-avatar { width:42px; height:42px; border-radius:50%; overflow:hidden; flex-shrink:0; border:2px solid var(--gold-light); }
+  .create-avatar img { width:100%; height:100%; object-fit:cover; }
+  .create-input { flex:1; border:1.5px solid var(--border); border-radius:40px; padding:9px 18px; font-family:'DM Sans',sans-serif; font-size:0.85rem; background:var(--warm); color:var(--ink); outline:none; cursor:pointer; transition:var(--transition); }
+  .create-input:focus { border-color:var(--gold); background:white; box-shadow:0 0 0 3px rgba(201,168,76,0.1); cursor:text; }
+  .create-input::placeholder { color:var(--muted); }
+  .create-actions { display:flex; gap:4px; }
+  .create-btn { display:flex; align-items:center; gap:5px; background:none; border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:0.8rem; font-weight:600; padding:7px 10px; border-radius:10px; color:var(--muted); transition:var(--transition); }
+  .create-btn:hover { background:var(--warm); color:var(--gold); }
+  .create-btn svg { width:18px; height:18px; }
+
+  /* SIDEBAR */
+  /* ================= FIX RIGHT SIDEBAR ================= */
+
+.sidebar-right{
+width:320px;
+min-width:320px;
+position:sticky;
+top:90px;
+align-self:start;
+display:flex;
+flex-direction:column;
+gap:20px;
+}
+
+/* BOX COMMON */
+.sidebar-profile,
+.sidebar-section{
+width:100%;
+background:#ffffff;
+border:1px solid #ddd8cc;
+border-radius:18px;
+padding:18px;
+box-shadow:0 4px 12px rgba(0,0,0,0.04);
+}
+
+/* PROFILE ROW */
+.profile-row{
+display:flex;
+align-items:center;
+gap:12px;
+}
+
+.profile-big-avatar{
+width:55px;
+height:55px;
+border-radius:50%;
+overflow:hidden;
+flex-shrink:0;
+}
+
+.profile-big-avatar img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+.profile-name{
+font-size:15px;
+font-weight:700;
+line-height:1.2;
+}
+
+.profile-handle{
+font-size:13px;
+color:#777;
+margin-top:3px;
+}
+
+.profile-switch{
+margin-left:auto;
+font-size:14px;
+font-weight:700;
+color:#c9a84c;
+cursor:pointer;
+background:none;
+border:none;
+}
+
+/* STATS */
+.profile-stats{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px;
+margin-top:18px;
+}
+
+.stat{
+text-align:center;
+padding:10px;
+background:#faf8f5;
+border-radius:12px;
+}
+
+.stat-num{
+font-size:18px;
+font-weight:700;
+}
+
+.stat-label{
+font-size:12px;
+color:#777;
+margin-top:2px;
+}
+
+/* TITLE */
+.section-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:15px;
+}
+
+.section-title{
+font-size:13px;
+font-weight:700;
+letter-spacing:1px;
+color:#777;
+}
+
+.section-action{
+font-size:14px;
+font-weight:700;
+color:#c9a84c;
+background:none;
+border:none;
+cursor:pointer;
+}
+
+/* SUGGESTION ITEM */
+.suggestion{
+display:flex;
+align-items:center;
+gap:10px;
+padding:8px 0;
+}
+
+.sug-avatar{
+width:42px;
+height:42px;
+border-radius:50%;
+overflow:hidden;
+flex-shrink:0;
+}
+
+.sug-avatar img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+.sug-info{
+flex:1;
+min-width:0;
+}
+
+.sug-name{
+font-size:14px;
+font-weight:700;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+}
+
+.sug-sub{
+font-size:12px;
+color:#777;
+line-height:1.3;
+margin-top:2px;
+}
+
+.follow-btn{
+padding:6px 14px;
+border:1px solid #c9a84c;
+background:none;
+color:#c9a84c;
+font-size:13px;
+font-weight:700;
+border-radius:20px;
+cursor:pointer;
+}
+
+/* MOBILE HIDE */
+@media(max-width:992px){
+.sidebar-right{
+display:none;
+}
+}
+  .follow-btn:hover, .follow-btn.following { background:var(--gold); color:white; }
+
+  .tag-item { display:flex; align-items:center; gap:10px; padding:8px 0; cursor:pointer; transition:var(--transition); }
+  .tag-item:hover { padding-left:4px; }
+  .tag-thumb { width:36px; height:36px; border-radius:8px; overflow:hidden; flex-shrink:0; border:1px solid var(--border); }
+  .tag-thumb img { width:100%; height:100%; object-fit:cover; }
+  .tag-name { font-size:0.83rem; font-weight:600; }
+  .tag-posts { font-size:0.72rem; color:var(--muted); }
+
+  .explore-header { font-family:'Playfair Display',serif; font-size:1.1rem; margin-bottom:12px; padding:0 4px; }
+  .explore-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; border-radius:12px; overflow:hidden; border:1px solid var(--border); margin-bottom:20px; }
+  .explore-item { aspect-ratio:1; overflow:hidden; cursor:pointer; position:relative; }
+  .explore-item img { width:100%; height:100%; object-fit:cover; transition:transform 0.4s ease; display:block; }
+  .explore-item:hover img { transform:scale(1.08); }
+  .explore-item::after { content:''; position:absolute; inset:0; background:rgba(0,0,0,0); transition:background 0.3s; }
+  .explore-item:hover::after { background:rgba(0,0,0,0.18); }
+
+  .sidebar-footer { font-size:0.72rem; color:var(--muted); line-height:1.8; padding:0 4px; }
+  .sidebar-footer a { color:var(--muted); text-decoration:none; }
+  .sidebar-footer a:hover { color:var(--gold); }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(13,13,13,0.75); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.3s ease; }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal { background:var(--card); border-radius:20px; max-width:480px; width:90%; padding:28px; transform:scale(0.92) translateY(20px); transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1); border:1px solid var(--border); }
+  .modal-overlay.open .modal { transform:scale(1) translateY(0); }
+  .modal-title { font-family:'Playfair Display',serif; font-size:1.4rem; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+  .modal-title span { color:var(--gold); }
+  .modal-drop { border:2px dashed var(--border); border-radius:12px; padding:36px 20px; text-align:center; cursor:pointer; transition:var(--transition); background:var(--warm); margin-bottom:16px; }
+  .modal-drop:hover,.modal-drop.drag { border-color:var(--gold); background:rgba(201,168,76,0.05); }
+  .modal-drop-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:14px; border-radius:10px; overflow:hidden; }
+  .modal-drop-grid img { width:100%; aspect-ratio:1; object-fit:cover; display:block; }
+  .modal-drop p { font-size:0.9rem; color:var(--muted); }
+  .modal-drop strong { color:var(--gold); }
+  #fileInput { display:none; }
+  .modal-preview { width:100%; aspect-ratio:1; border-radius:12px; overflow:hidden; margin-bottom:16px; display:none; }
+  .modal-preview img { width:100%; height:100%; object-fit:cover; }
+  .modal-textarea { width:100%; border:1.5px solid var(--border); border-radius:12px; padding:12px; font-family:'DM Sans',sans-serif; font-size:0.875rem; background:var(--warm); color:var(--ink); outline:none; resize:none; height:90px; transition:var(--transition); margin-bottom:16px; }
+  .modal-textarea:focus { border-color:var(--gold); background:white; box-shadow:0 0 0 3px rgba(201,168,76,0.1); }
+  .modal-footer { display:flex; gap:10px; justify-content:flex-end; }
+  .btn-cancel { background:var(--warm); border:1px solid var(--border); color:var(--muted); font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.875rem; padding:10px 20px; border-radius:10px; cursor:pointer; transition:var(--transition); }
+  .btn-cancel:hover { border-color:var(--rose); color:var(--rose); }
+  .btn-share { background:var(--gold); border:none; color:white; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.875rem; padding:10px 24px; border-radius:10px; cursor:pointer; transition:var(--transition); }
+  .btn-share:hover { background:var(--rose); transform:translateY(-1px); box-shadow:0 4px 16px rgba(201,168,76,0.4); }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--ink); color:white; padding:12px 24px; border-radius:40px; font-size:0.875rem; font-weight:500; z-index:300; transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1); pointer-events:none; white-space:nowrap; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  @media(max-width:900px) { .layout{grid-template-columns:1fr;max-width:600px} .sidebar-right{display:none} }
+  @media(max-width:480px) { nav{padding:0 12px;gap:8px} .nav-search{display:none} .layout{padding:72px 12px 12px} }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Lumi<span>na</span></div>
+  <div class="nav-search">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" placeholder="Search people, places…">
+  </div>
+  <div class="nav-icons">
+    <button class="nav-icon" onclick="openModal()" title="Create Post">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
+    </button>
+    <button class="nav-icon" title="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </button>
+    <button class="nav-icon" title="Explore">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    </button>
+    <button class="nav-icon" title="Notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="badge"></span>
+    </button>
+  </div>
+  <div class="nav-avatar"><img src="https://picsum.photos/seed/me_profile/80/80" alt="You"></div>
+</nav>
+
+<div class="layout">
+  <div class="sidebar-left"></div>
+
+  <main id="feed">
+    <div class="stories-bar" id="storiesBar">
+      <div class="story" onclick="showToast('Add to your story')">
+        <div class="story-add-wrap">
+          <img src="https://picsum.photos/seed/me_profile/120/120" alt="Your story">
+          <div class="plus-badge">+</div>
+        </div>
+        <div class="story-name">Your Story</div>
+      </div>
+    </div>
+
+    <div class="create-post">
+      <div class="create-avatar"><img src="https://picsum.photos/seed/me_profile/80/80" alt="You"></div>
+      <input class="create-input" type="text" placeholder="Share something with the world…" onclick="openModal()" readonly>
+      <div class="create-actions">
+        <button class="create-btn" onclick="openModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Photo
+        </button>
+      </div>
+    </div>
+
+    <div id="postsContainer"></div>
+  </main>
+
+  <aside class="sidebar-right">
+    <div class="sidebar-profile">
+      <div class="profile-row">
+        <div class="profile-big-avatar"><img src="https://picsum.photos/seed/me_profile/120/120" alt="You"></div>
+        <div>
+          <div class="profile-name">lumina_user</div>
+          <div class="profile-handle">@lumina_user</div>
+        </div>
+        <button class="profile-switch">Switch</button>
+      </div>
+      <div class="profile-stats">
+        <div class="stat"><div class="stat-num" id="postCount">4</div><div class="stat-label">Posts</div></div>
+        <div class="stat"><div class="stat-num">1.2k</div><div class="stat-label">Followers</div></div>
+        <div class="stat"><div class="stat-num">380</div><div class="stat-label">Following</div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-header">
+        <div class="section-title">Suggested for you</div>
+        <button class="section-action">See all</button>
+      </div>
+      <div id="suggestions"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-header">
+        <div class="section-title">Trending Tags</div>
+        <button class="section-action">More</button>
+      </div>
+      <div id="trending"></div>
+    </div>
+
+    <div>
+      <div class="explore-header">✦ Explore</div>
+      <div class="explore-grid" id="exploreGrid"></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <a href="#">About</a> · <a href="#">Help</a> · <a href="#">Privacy</a> · <a href="#">Terms</a><br>
+      © 2025 Lumina · Made with ✦
+    </div>
+  </aside>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-title">✦ <span>Share a Moment</span></div>
+    <div class="modal-drop" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="modal-drop-grid">
+        <img src="https://picsum.photos/seed/md1/120/120" alt="">
+        <img src="https://picsum.photos/seed/md2/120/120" alt="">
+        <img src="https://picsum.photos/seed/md3/120/120" alt="">
+      </div>
+      <p><strong>Click to upload</strong> or drag & drop your photo</p>
+      <p style="margin-top:4px;font-size:0.78rem;margin-top:6px;">JPG, PNG, GIF up to 10MB</p>
+    </div>
+    <div class="modal-preview" id="modalPreview"><img id="previewImg" src="" alt="preview"></div>
+    <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+    <textarea class="modal-textarea" id="captionInput" placeholder="Write a caption… ✦"></textarea>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-share" onclick="sharePost()">Share Post ✦</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+const stories = [
+  { name:'sofia_m',      avatar:'https://picsum.photos/seed/av_sofia/120/120',   seen:false },
+  { name:'travel_wolf',  avatar:'https://picsum.photos/seed/av_wolf/120/120',    seen:false },
+  { name:'foodie_tales', avatar:'https://picsum.photos/seed/av_food/120/120',    seen:true  },
+  { name:'alex.photo',   avatar:'https://picsum.photos/seed/av_alex/120/120',    seen:false },
+  { name:'nature_lens',  avatar:'https://picsum.photos/seed/av_nature/120/120',  seen:true  },
+  { name:'city_vibes',   avatar:'https://picsum.photos/seed/av_city/120/120',    seen:false },
+  { name:'luna_art',     avatar:'https://picsum.photos/seed/av_luna/120/120',    seen:false },
+];
+
+const posts = [
+  {
+    id:1, user:'sofia_m',
+    avatar:'https://picsum.photos/seed/av_sofia/80/80',
+    location:'Paris, France',
+    image:'https://picsum.photos/seed/post_paris/600/600',
+    caption:'Golden hour at the Eiffel Tower was absolutely magical ✨ Some moments are meant to be lived twice — once in real life, once in memory.',
+    likes:1243, time:'2 hours ago', liked:false, saved:false,
+    comments:[
+      { name:'travel_wolf', avatar:'https://picsum.photos/seed/av_wolf/80/80',   text:'Stunning! Paris never disappoints 🤩' },
+      { name:'alex.photo',  avatar:'https://picsum.photos/seed/av_alex/80/80',   text:"That light is chef's kiss 🤌" },
+    ]
+  },
+  {
+    id:2, user:'travel_wolf',
+    avatar:'https://picsum.photos/seed/av_wolf/80/80',
+    location:'Kyoto, Japan',
+    image:'https://picsum.photos/seed/post_kyoto/600/600',
+    caption:'Morning at Fushimi Inari before the crowds arrive. Just me, the foxes, and a thousand torii gates. 🦊',
+    likes:2891, time:'5 hours ago', liked:true, saved:false,
+    comments:[
+      { name:'sofia_m', avatar:'https://picsum.photos/seed/av_sofia/80/80', text:'This is on my bucket list!! When did you go?' },
+    ]
+  },
+  {
+    id:3, user:'foodie_tales',
+    avatar:'https://picsum.photos/seed/av_food/80/80',
+    location:'Tokyo, Japan',
+    image:'https://picsum.photos/seed/post_ramen/600/600',
+    caption:'Found this tiny ramen shop down a side street in Shibuya. 45-minute wait that was absolutely worth every second 🍜🔥',
+    likes:567, time:'8 hours ago', liked:false, saved:true,
+    comments:[]
+  },
+  {
+    id:4, user:'nature_lens',
+    avatar:'https://picsum.photos/seed/av_nature/80/80',
+    location:'Iceland',
+    image:'https://picsum.photos/seed/post_aurora/600/600',
+    caption:'The Northern Lights danced for 3 hours. No filter needed, no words sufficient. Some things are beyond Instagram. 💚',
+    likes:5420, time:'1 day ago', liked:false, saved:false,
+    comments:[
+      { name:'travel_wolf', avatar:'https://picsum.photos/seed/av_wolf/80/80',   text:"I've been trying to see this for 5 years!" },
+      { name:'sofia_m',     avatar:'https://picsum.photos/seed/av_sofia/80/80',  text:'This is UNREAL 🤯' },
+      { name:'city_vibes',  avatar:'https://picsum.photos/seed/av_city/80/80',   text:'Dream shot. Absolutely breathtaking.' },
+    ]
+  }
+];
+
+const suggestions = [
+  { name:'city_vibes',     avatar:'https://picsum.photos/seed/av_city/80/80',   sub:'Followed by travel_wolf' },
+  { name:'alex.photo',     avatar:'https://picsum.photos/seed/av_alex/80/80',   sub:'12 mutual friends' },
+  { name:'mountain_tales', avatar:'https://picsum.photos/seed/av_mount/80/80',  sub:'New to Lumina' },
+  { name:'ocean_dreams',   avatar:'https://picsum.photos/seed/av_ocean/80/80',  sub:'Followed by sofia_m' },
+];
+
+const trending = [
+  { tag:'sunsetvibes',      posts:'2.4M posts', thumb:'https://picsum.photos/seed/tr_sunset/80/80'  },
+  { tag:'travelgram',       posts:'18M posts',  thumb:'https://picsum.photos/seed/tr_travel/80/80'  },
+  { tag:'foodphotography',  posts:'8.1M posts', thumb:'https://picsum.photos/seed/tr_food/80/80'    },
+  { tag:'goldenhour',       posts:'5.9M posts', thumb:'https://picsum.photos/seed/tr_golden/80/80'  },
+];
+
+const exploreImages = [
+  'https://picsum.photos/seed/ex_a/200/200',
+  'https://picsum.photos/seed/ex_b/200/200',
+  'https://picsum.photos/seed/ex_c/200/200',
+  'https://picsum.photos/seed/ex_d/200/200',
+  'https://picsum.photos/seed/ex_e/200/200',
+  'https://picsum.photos/seed/ex_f/200/200',
+];
+
+// ===== RENDER =====
+function renderStories() {
+  const bar = document.getElementById('storiesBar');
+  stories.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'story';
+    el.innerHTML = `
+      <div class="story-ring ${s.seen?'seen':''}">
+        <img class="story-img" src="${s.avatar}" alt="${s.name}" loading="lazy">
+      </div>
+      <div class="story-name">${s.name}</div>`;
+    el.onclick = () => {
+      showToast(`Viewing ${s.name}'s story`);
+      el.querySelector('.story-ring').classList.add('seen'); s.seen=true;
+    };
+    bar.appendChild(el);
+  });
+}
+
+function renderPosts(data) {
+  const c = document.getElementById('postsContainer');
+  data.forEach((p,i) => c.appendChild(createPostEl(p, i*0.1)));
+  updatePostCount();
+}
+
+function createPostEl(p, delay=0) {
+  const div = document.createElement('div');
+  div.className = 'post'; div.style.animationDelay = delay+'s'; div.id='post-'+p.id;
+  const imgSrc = p.imageSrc || p.image;
+  const commentsHtml = p.comments.map(c=>`
+    <div class="comment">
+      <div class="comment-avatar"><img src="${c.avatar}" alt="${c.name}" loading="lazy"></div>
+      <div class="comment-body"><div class="comment-name">${c.name}</div><div class="comment-text">${c.text}</div></div>
+    </div>`).join('');
+
+  div.innerHTML = `
+    <div class="post-header">
+      <div class="post-avatar"><img src="${p.avatar}" alt="${p.user}" loading="lazy"></div>
+      <div class="post-meta">
+        <div class="post-username">${p.user}</div>
+        <div class="post-location">${p.location}</div>
+      </div>
+      <button class="post-menu" onclick="showToast('Options coming soon…')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+      </button>
+    </div>
+    <div class="post-image-wrap" id="img-wrap-${p.id}" ondblclick="doubleClickLike(${p.id},event)">
+      <img src="${imgSrc}" alt="Post by ${p.user}" loading="lazy">
+    </div>
+    <div class="post-actions">
+      <button class="action-btn ${p.liked?'liked':''}" id="like-btn-${p.id}" onclick="toggleLike(${p.id})">
+        <svg viewBox="0 0 24 24" fill="${p.liked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <button class="action-btn" onclick="toggleComments(${p.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <button class="action-btn" onclick="showToast('Link copied! ✦')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+      </button>
+      <div class="action-spacer"></div>
+      <button class="action-btn ${p.saved?'saved':''}" id="save-btn-${p.id}" onclick="toggleSave(${p.id})">
+        <svg viewBox="0 0 24 24" fill="${p.saved?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
+    </div>
+    <div class="post-likes" id="likes-${p.id}">${formatNum(p.likes)} likes</div>
+    <div class="post-caption"><span class="username">${p.user}</span>${p.caption}</div>
+    ${p.comments.length?`<div class="post-comments-link" onclick="toggleComments(${p.id})">View all ${p.comments.length} comment${p.comments.length>1?'s':''}</div>`:''}
+    <div class="comments-section" id="comments-${p.id}">${commentsHtml}</div>
+    <div class="post-time">${p.time}</div>
+    <div class="post-comment-input">
+      <div class="comment-me-avatar"><img src="https://picsum.photos/seed/me_profile/80/80" alt="You" loading="lazy"></div>
+      <input type="text" placeholder="Add a comment…" id="comment-input-${p.id}"
+        oninput="toggleCommentBtn(${p.id})" onkeydown="if(event.key==='Enter')addComment(${p.id})">
+      <button class="comment-post-btn" id="comment-btn-${p.id}" onclick="addComment(${p.id})">Post</button>
+    </div>`;
+  return div;
+}
+
+function renderSuggestions() {
+  const el = document.getElementById('suggestions');
+  suggestions.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'suggestion';
+    div.innerHTML = `
+      <div class="sug-avatar"><img src="${s.avatar}" alt="${s.name}" loading="lazy"></div>
+      <div class="sug-info"><div class="sug-name">${s.name}</div><div class="sug-sub">${s.sub}</div></div>
+      <button class="follow-btn" onclick="handleFollow(this)">Follow</button>`;
+    el.appendChild(div);
+  });
+}
+
+function renderTrending() {
+  const el = document.getElementById('trending');
+  trending.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'tag-item';
+    div.innerHTML = `
+      <div class="tag-thumb"><img src="${t.thumb}" alt="${t.tag}" loading="lazy"></div>
+      <div><div class="tag-name">#${t.tag}</div><div class="tag-posts">${t.posts}</div></div>`;
+    div.onclick = () => showToast('#'+t.tag);
+    el.appendChild(div);
+  });
+}
+
+function renderExplore() {
+  const grid = document.getElementById('exploreGrid');
+  exploreImages.forEach(src => {
+    const div = document.createElement('div');
+    div.className = 'explore-item';
+    div.innerHTML = `<img src="${src}" alt="Explore" loading="lazy">`;
+    div.onclick = () => showToast('Opening explore…');
+    grid.appendChild(div);
+  });
+}
+
+// ===== INTERACTIONS =====
+function toggleLike(id) {
+  const p = posts.find(x=>x.id===id); if(!p) return;
+  p.liked = !p.liked; p.likes += p.liked?1:-1;
+  const btn = document.getElementById('like-btn-'+id);
+  btn.classList.toggle('liked', p.liked);
+  btn.querySelector('svg').setAttribute('fill', p.liked?'currentColor':'none');
+  document.getElementById('likes-'+id).textContent = formatNum(p.likes)+' likes';
+  btn.classList.add('like-animate');
+  setTimeout(()=>btn.classList.remove('like-animate'),500);
+}
+
+function doubleClickLike(id, event) {
+  const wrap = document.getElementById('img-wrap-'+id);
+  const rect = wrap.getBoundingClientRect();
+  const burst = document.createElement('div');
+  burst.className = 'heart-burst';
+  burst.style.left = (event.clientX-rect.left)+'px';
+  burst.style.top  = (event.clientY-rect.top)+'px';
+  burst.textContent = '❤️';
+  wrap.appendChild(burst);
+  setTimeout(()=>burst.remove(), 850);
+  const p = posts.find(x=>x.id===id);
+  if(p && !p.liked) toggleLike(id);
+}
+
+function toggleSave(id) {
+  const p = posts.find(x=>x.id===id); if(!p) return;
+  p.saved = !p.saved;
+  const btn = document.getElementById('save-btn-'+id);
+  btn.classList.toggle('saved', p.saved);
+  btn.querySelector('svg').setAttribute('fill', p.saved?'currentColor':'none');
+  showToast(p.saved?'Saved to collection ✦':'Removed from saved');
+}
+
+function toggleComments(id) {
+  document.getElementById('comments-'+id).classList.toggle('visible');
+}
+
+function toggleCommentBtn(id) {
+  const inp = document.getElementById('comment-input-'+id);
+  document.getElementById('comment-btn-'+id).classList.toggle('active', inp.value.trim().length>0);
+}
+
+function addComment(id) {
+  const inp = document.getElementById('comment-input-'+id);
+  const text = inp.value.trim(); if(!text) return;
+  const container = document.getElementById('comments-'+id);
+  container.classList.add('visible');
+  const div = document.createElement('div');
+  div.className = 'comment';
+  div.innerHTML = `
+    <div class="comment-avatar"><img src="https://picsum.photos/seed/me_profile/80/80" alt="You"></div>
+    <div class="comment-body"><div class="comment-name">lumina_user</div><div class="comment-text">${text}</div></div>`;
+  container.appendChild(div);
+  inp.value=''; toggleCommentBtn(id);
+  showToast('Comment posted ✦');
+}
+
+function handleFollow(btn) {
+  btn.classList.toggle('following');
+  btn.textContent = btn.classList.contains('following')?'Following':'Follow';
+}
+
+// ===== MODAL =====
+let selectedFile = null;
+function openModal() { document.getElementById('modalOverlay').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow='';
+  document.getElementById('modalPreview').style.display='none';
+  document.getElementById('dropZone').style.display='block';
+  document.getElementById('previewImg').src='';
+  document.getElementById('captionInput').value='';
+  selectedFile=null;
+}
+function handleOverlayClick(e) { if(e.target===document.getElementById('modalOverlay')) closeModal(); }
+
+function handleFileSelect(e) {
+  const file = e.target && e.target.files ? e.target.files[0] : e;
+  if(!file) return;
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('previewImg').src = ev.target.result;
+    document.getElementById('modalPreview').style.display='block';
+    document.getElementById('dropZone').style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('drag'));
+dz.addEventListener('drop', e=>{
+  e.preventDefault(); dz.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')) handleFileSelect(file);
+});
+
+function sharePost() {
+  const caption = document.getElementById('captionInput').value.trim() || 'No caption added.';
+  const ts = Date.now();
+  const imgSrc = selectedFile
+    ? document.getElementById('previewImg').src
+    : `https://picsum.photos/seed/new${ts}/600/600`;
+
+  const newPost = {
+    id:ts, user:'lumina_user',
+    avatar:'https://picsum.photos/seed/me_profile/80/80',
+    location:'Shared from Lumina',
+    image: imgSrc, imageSrc: imgSrc,
+    caption, likes:0, time:'Just now',
+    liked:false, saved:false, comments:[]
+  };
+
+  posts.unshift(newPost);
+  const container = document.getElementById('postsContainer');
+  const el = createPostEl(newPost, 0);
+  container.insertBefore(el, container.firstChild);
+  updatePostCount(); closeModal();
+  showToast('Your post is live! ✦');
+  setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'start'}),200);
+}
+
+function formatNum(n) {
+  if(n>=1000000) return (n/1000000).toFixed(1)+'M';
+  if(n>=1000)    return (n/1000).toFixed(1)+'k';
+  return n.toString();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+function updatePostCount() {
+  document.getElementById('postCount').textContent = posts.length;
+}
+
+// INIT
+renderStories(); renderPosts(posts); renderSuggestions(); renderTrending(); renderExplore();
+</script>
+</body>
+</html>
